@@ -196,11 +196,9 @@ a {
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
@@ -732,11 +730,13 @@ th {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 50;
-  background: rgba(11, 21, 32, 0.42);
-  display: grid;
-  place-items: center;
-  padding: 1rem;
+  z-index: 1000;
+  background: rgba(11, 21, 32, 0.48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  overflow-y: auto;
   animation: fade 180ms ease;
 }
 
@@ -751,12 +751,26 @@ th {
 
 .modal {
   width: min(480px, 100%);
+  max-height: min(90vh, 900px);
+  overflow-y: auto;
   background: var(--modal-bg);
   color: var(--ink);
   border-radius: 24px;
   padding: 1.25rem;
   box-shadow: 0 30px 80px rgba(11, 21, 32, 0.28);
-  animation: rise 220ms ease;
+  animation: modal-in 220ms ease;
+  margin: auto;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .modal-wide {

@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
+
 export function StatusPill({ value }) {
   const key = String(value || "").replace(/\s+/g, "_").toLowerCase();
   return <span className={`pill pill-${key}`}>{formatStatus(value)}</span>;
@@ -28,11 +31,27 @@ export function EmptyState({ title, body }) {
 }
 
 export function Modal({ title, onClose, children, wide }) {
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div className="modal-backdrop" onClick={onClose} role="presentation">
       <div
         className={`modal ${wide ? "modal-wide" : ""}`}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
       >
         <div className="modal-head">
           <h2>{title}</h2>
@@ -42,7 +61,8 @@ export function Modal({ title, onClose, children, wide }) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
