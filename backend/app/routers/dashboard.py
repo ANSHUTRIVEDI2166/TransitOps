@@ -10,7 +10,7 @@ from app.database import get_db
 from app.auth.security import get_current_user
 from app.models.user import User
 from app.schemas import DashboardKPI, AnalyticsSummary
-from app.services.analytics import get_dashboard_kpis, get_analytics
+from app.services.analytics import get_dashboard_kpis, get_analytics, get_home_overview
 from app.services.pdf_export import build_analytics_pdf
 
 router = APIRouter(prefix="/api", tags=["dashboard"])
@@ -25,6 +25,17 @@ def dashboard(
     _: User = Depends(get_current_user),
 ):
     return get_dashboard_kpis(db, vehicle_type, status, region)
+
+
+@router.get("/dashboard/overview")
+def dashboard_overview(
+    vehicle_type: Optional[str] = None,
+    status: Optional[str] = None,
+    region: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    return get_home_overview(db, vehicle_type, status, region)
 
 
 @router.get("/analytics", response_model=AnalyticsSummary)

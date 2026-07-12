@@ -1,5 +1,6 @@
+from datetime import date, timedelta
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -133,3 +134,94 @@ def get_analytics(db: Session) -> AnalyticsSummary:
         avg_fuel_efficiency=avg_eff,
         vehicles=rows,
     )
+
+
+def get_home_overview(
+    db: Session,
+    vehicle_type: Optional[str] = None,
+    status: Optional[str] = None,
+    region: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Single payload for the homepage dashboard."""
+    kpis = get_dashboard_kpis(db, vehicle_type, status, region)
+
+    vq = db.query(Vehicle.status, func.count(Vehicle.id)).group_by(Vehicle.status)
+    if vehicle_type:
+        vq = vq.filter(Vehicle.vehicle_type == vehicle_type)
+    if status:
+        vq = vq.filter(Vehicle.status == status)
+    if region:
+        vq = vq.filter(Vehicle.region == region)
+    fleet_mix = [
+        {"name": s.value.replace("_", " "), "value": int(c)} for s, c in vq.all()
+    ]
+
+    trip_mix = [
+        {"name": s.value, "trips": int(c)}
+        for s, c in db.query(Trip.status, func.count(Trip.id))
+        .group_by(Trip.status)
+        .all()
+    ]
+
+    live_rows = (
+        db.query(
+            Trip.id,
+            Trip.source,
+            Trip.destination,
+            Trip.status,
+            Vehicle.registration_number,
+            Driver.full_name,
+        )
+        .outerjoin(Vehicle, Vehicle.id == Trip.vehicle_id)
+        .outerjoin(Driver, Driver.id == Trip.driver_id)
+        .filter(Trip.status == TripStatus.dispatched)
+        .order_by(Trip.id.desc())
+        .limit(5)
+        .all()
+    )
+    live_trips: List[Dict[str, Any]] = [
+        {
+            "id": row.id,
+            "source": row.source,
+            "destination": row.destination,
+            "status": row.status.value,
+            "vehicle_reg": row.registration_number,
+            "driver_name": row.full_name,
+        }
+        for row in live_rows
+    ]
+
+    today = date.today()
+    expiring = (
+        db.query(Driver)
+        .filter(
+            Driver.license_expiry >= today,
+            Driver.license_expiry <= today + timedelta(days=30),
+        )
+        .order_by(Driver.license_expiry.asc())
+        .limit(6)
+        .all()
+    )
+    license_watch = [
+        {
+            "id": d.id,
+            "full_name": d.full_name,
+            "license_expiry": d.license_expiry.isoformat(),
+            "safety_score": float(d.safety_score),
+            "status": d.status.value,
+        }
+        for d in expiring
+    ]
+
+    fuel_total = db.query(func.coalesce(func.sum(FuelLog.cost), 0)).scalar()
+    maint_total = db.query(func.coalesce(func.sum(MaintenanceLog.cost), 0)).scalar()
+    ops_cost = float(Decimal(str(fuel_total)) + Decimal(str(maint_total)))
+
+    return {
+        "kpis": kpis,
+        "fleet_mix": fleet_mix,
+        "trip_mix": trip_mix,
+        "live_trips": live_trips,
+        "license_watch": license_watch,
+        "ops_cost": ops_cost,
+    }
