@@ -321,6 +321,7 @@ a.primary-btn {
 }
 
 .filter-row select,
+.filter-row input,
 .toolbar input,
 .field input,
 .field select,
@@ -334,7 +335,8 @@ a.primary-btn {
   outline: none;
 }
 
-.toolbar input {
+.toolbar input,
+.filter-row input {
   flex: 1;
   min-width: 220px;
 }
@@ -343,6 +345,7 @@ a.primary-btn {
 .field select:focus,
 .toolbar input:focus,
 .filter-row select:focus,
+.filter-row input:focus,
 .login-panel input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(31, 122, 107, 0.15);

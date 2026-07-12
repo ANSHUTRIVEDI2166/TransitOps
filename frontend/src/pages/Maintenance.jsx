@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import Pagination from "../components/Pagination";
@@ -19,6 +19,9 @@ export default function Maintenance() {
   const [logs, setLogs] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [q, setQ] = useState("");
   const [form, setForm] = useState({
     vehicle_id: "",
     title: "",
@@ -29,14 +32,42 @@ export default function Maintenance() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const filtered = useMemo(() => {
+    let list = [...logs];
+    if (status) list = list.filter((l) => l.status === status);
+    if (q.trim()) {
+      const needle = q.trim().toLowerCase();
+      list = list.filter(
+        (l) =>
+          l.vehicle_reg?.toLowerCase().includes(needle) ||
+          l.title?.toLowerCase().includes(needle) ||
+          l.description?.toLowerCase().includes(needle)
+      );
+    }
+    list.sort((a, b) => {
+      if (sort === "oldest") {
+        return String(a.service_date).localeCompare(String(b.service_date));
+      }
+      if (sort === "cost_high") {
+        return Number(b.cost) - Number(a.cost);
+      }
+      if (sort === "cost_low") {
+        return Number(a.cost) - Number(b.cost);
+      }
+      return (
+        String(b.service_date).localeCompare(String(a.service_date)) ||
+        b.id - a.id
+      );
+    });
+    return list;
+  }, [logs, status, sort, q]);
+
   const { page, pageSize, total, slice, setPage, setPageSize } =
-    usePagination(logs);
+    usePagination(filtered);
 
   async function load() {
-    const [m, v] = await Promise.all([
-      api.maintenance(),
-      api.vehicles(),
-    ]);
+    const [m, v] = await Promise.all([api.maintenance(), api.vehicles()]);
     setLogs(m);
     setVehicles(
       v.filter((item) => !["retired", "on_trip"].includes(item.status))
@@ -83,6 +114,25 @@ export default function Maintenance() {
         }
       />
 
+      <div className="filter-row">
+        <input
+          placeholder="Search vehicle or work…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All statuses</option>
+          <option value="open">Open</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select value={sort} onChange={(e) => setSort(e.target.value)}>
+          <option value="newest">Newest date</option>
+          <option value="oldest">Oldest date</option>
+          <option value="cost_high">Cost high → low</option>
+          <option value="cost_low">Cost low → high</option>
+        </select>
+      </div>
+
       {error && <p className="form-error">{error}</p>}
 
       {loading ? (
@@ -91,6 +141,11 @@ export default function Maintenance() {
         <EmptyState
           title="Shop is clear"
           body="Open a maintenance log to pull a vehicle off the road."
+        />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title="No matching tickets"
+          body="Try another status or search."
         />
       ) : (
         <div className="table-wrap">
@@ -111,7 +166,9 @@ export default function Maintenance() {
                   <td className="mono">{log.vehicle_reg}</td>
                   <td>
                     <strong>{log.title}</strong>
-                    {log.description && <p className="muted">{log.description}</p>}
+                    {log.description && (
+                      <p className="muted">{log.description}</p>
+                    )}
                   </td>
                   <td>{log.service_date}</td>
                   <td>{formatMoney(log.cost)}</td>

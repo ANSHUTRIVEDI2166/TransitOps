@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import Pagination from "../components/Pagination";
@@ -26,8 +26,60 @@ export default function Expenses() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const fuelPage = usePagination(fuel);
-  const expensePage = usePagination(expenses);
+  const [fuelSort, setFuelSort] = useState("newest");
+  const [fuelQ, setFuelQ] = useState("");
+  const [expenseCategory, setExpenseCategory] = useState("");
+  const [expenseSort, setExpenseSort] = useState("newest");
+  const [expenseQ, setExpenseQ] = useState("");
+
+  const filteredFuel = useMemo(() => {
+    let list = [...fuel];
+    if (fuelQ.trim()) {
+      const needle = fuelQ.trim().toLowerCase();
+      list = list.filter((row) => row.vehicle_reg?.toLowerCase().includes(needle));
+    }
+    list.sort((a, b) => {
+      if (fuelSort === "cost_high") return Number(b.cost) - Number(a.cost);
+      if (fuelSort === "cost_low") return Number(a.cost) - Number(b.cost);
+      if (fuelSort === "oldest") {
+        return String(a.log_date).localeCompare(String(b.log_date)) || a.id - b.id;
+      }
+      return String(b.log_date).localeCompare(String(a.log_date)) || b.id - a.id;
+    });
+    return list;
+  }, [fuel, fuelQ, fuelSort]);
+
+  const filteredExpenses = useMemo(() => {
+    let list = [...expenses];
+    if (expenseCategory) {
+      list = list.filter((row) => row.category === expenseCategory);
+    }
+    if (expenseQ.trim()) {
+      const needle = expenseQ.trim().toLowerCase();
+      list = list.filter(
+        (row) =>
+          row.vehicle_reg?.toLowerCase().includes(needle) ||
+          row.description?.toLowerCase().includes(needle) ||
+          row.category?.toLowerCase().includes(needle)
+      );
+    }
+    list.sort((a, b) => {
+      if (expenseSort === "amount_high") return Number(b.amount) - Number(a.amount);
+      if (expenseSort === "amount_low") return Number(a.amount) - Number(b.amount);
+      if (expenseSort === "oldest") {
+        return (
+          String(a.expense_date).localeCompare(String(b.expense_date)) || a.id - b.id
+        );
+      }
+      return (
+        String(b.expense_date).localeCompare(String(a.expense_date)) || b.id - a.id
+      );
+    });
+    return list;
+  }, [expenses, expenseCategory, expenseQ, expenseSort]);
+
+  const fuelPage = usePagination(filteredFuel);
+  const expensePage = usePagination(filteredExpenses);
   const [fuelForm, setFuelForm] = useState({
     vehicle_id: "",
     liters: "",
@@ -128,79 +180,122 @@ export default function Expenses() {
       {loading ? (
         <TableSkeleton rows={8} />
       ) : (
-      <div className="board-grid">
-        <section className="panel">
-          <div className="panel-head">
-            <h2>Fuel logs</h2>
-          </div>
-          {fuel.length === 0 ? (
-            <EmptyState
-              title="No fuel entries"
-              body="Trip completions also auto-log fuel."
-            />
-          ) : (
-            <>
-              <ul className="timeline">
-                {fuelPage.slice.map((row) => (
-                  <li key={row.id}>
-                    <div>
-                      <strong>{row.vehicle_reg}</strong>
-                      <p>
-                        {row.liters} L · {formatMoney(row.cost)} · {row.log_date}
-                      </p>
-                    </div>
-                    <StatusPill value="fuel" />
-                  </li>
-                ))}
-              </ul>
-              <Pagination
-                page={fuelPage.page}
-                pageSize={fuelPage.pageSize}
-                total={fuelPage.total}
-                onPageChange={fuelPage.setPage}
-                onPageSizeChange={fuelPage.setPageSize}
+        <div className="board-grid">
+          <section className="panel">
+            <div className="panel-head">
+              <h2>Fuel logs</h2>
+            </div>
+            <div className="filter-row">
+              <input
+                placeholder="Search vehicle…"
+                value={fuelQ}
+                onChange={(e) => setFuelQ(e.target.value)}
               />
-            </>
-          )}
-        </section>
+              <select value={fuelSort} onChange={(e) => setFuelSort(e.target.value)}>
+                <option value="newest">Newest date</option>
+                <option value="oldest">Oldest date</option>
+                <option value="cost_high">Cost high → low</option>
+                <option value="cost_low">Cost low → high</option>
+              </select>
+            </div>
+            {fuel.length === 0 ? (
+              <EmptyState
+                title="No fuel entries"
+                body="Trip completions also auto-log fuel."
+              />
+            ) : filteredFuel.length === 0 ? (
+              <EmptyState title="No matches" body="Try another search or sort." />
+            ) : (
+              <>
+                <ul className="timeline">
+                  {fuelPage.slice.map((row) => (
+                    <li key={row.id}>
+                      <div>
+                        <strong>{row.vehicle_reg}</strong>
+                        <p>
+                          {row.liters} L · {formatMoney(row.cost)} · {row.log_date}
+                        </p>
+                      </div>
+                      <StatusPill value="fuel" />
+                    </li>
+                  ))}
+                </ul>
+                <Pagination
+                  page={fuelPage.page}
+                  pageSize={fuelPage.pageSize}
+                  total={fuelPage.total}
+                  onPageChange={fuelPage.setPage}
+                  onPageSizeChange={fuelPage.setPageSize}
+                />
+              </>
+            )}
+          </section>
 
-        <section className="panel">
-          <div className="panel-head">
-            <h2>All expenses</h2>
-          </div>
-          {expenses.length === 0 ? (
-            <EmptyState
-              title="No expenses"
-              body="Toll, fuel, and maintenance land here."
-            />
-          ) : (
-            <>
-              <ul className="timeline">
-                {expensePage.slice.map((row) => (
-                  <li key={row.id}>
-                    <div>
-                      <strong>
-                        {row.vehicle_reg || "General"} · {formatMoney(row.amount)}
-                      </strong>
-                      <p>
-                        {row.description || "—"} · {row.expense_date}
-                      </p>
-                    </div>
-                    <StatusPill value={row.category} />
-                  </li>
-                ))}
-              </ul>
-              <Pagination
-                page={expensePage.page}
-                pageSize={expensePage.pageSize}
-                total={expensePage.total}
-                onPageChange={expensePage.setPage}
-                onPageSizeChange={expensePage.setPageSize}
+          <section className="panel">
+            <div className="panel-head">
+              <h2>All expenses</h2>
+            </div>
+            <div className="filter-row">
+              <input
+                placeholder="Search vehicle or note…"
+                value={expenseQ}
+                onChange={(e) => setExpenseQ(e.target.value)}
               />
-            </>
-          )}
-        </section>
-      </div>
+              <select
+                value={expenseCategory}
+                onChange={(e) => setExpenseCategory(e.target.value)}
+              >
+                <option value="">All categories</option>
+                <option value="toll">Toll</option>
+                <option value="fuel">Fuel</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="other">Other</option>
+              </select>
+              <select
+                value={expenseSort}
+                onChange={(e) => setExpenseSort(e.target.value)}
+              >
+                <option value="newest">Newest date</option>
+                <option value="oldest">Oldest date</option>
+                <option value="amount_high">Amount high → low</option>
+                <option value="amount_low">Amount low → high</option>
+              </select>
+            </div>
+            {expenses.length === 0 ? (
+              <EmptyState
+                title="No expenses"
+                body="Toll, fuel, and maintenance land here."
+              />
+            ) : filteredExpenses.length === 0 ? (
+              <EmptyState title="No matches" body="Try another category or search." />
+            ) : (
+              <>
+                <ul className="timeline">
+                  {expensePage.slice.map((row) => (
+                    <li key={row.id}>
+                      <div>
+                        <strong>
+                          {row.vehicle_reg || "General"} · {formatMoney(row.amount)}
+                        </strong>
+                        <p>
+                          {row.description || "—"} · {row.expense_date}
+                        </p>
+                      </div>
+                      <StatusPill value={row.category} />
+                    </li>
+                  ))}
+                </ul>
+                <Pagination
+                  page={expensePage.page}
+                  pageSize={expensePage.pageSize}
+                  total={expensePage.total}
+                  onPageChange={expensePage.setPage}
+                  onPageSizeChange={expensePage.setPageSize}
+                />
+              </>
+            )}
+          </section>
+        </div>
       )}
 
       {mode === "fuel" && (

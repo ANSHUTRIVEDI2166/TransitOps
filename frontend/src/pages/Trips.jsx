@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import Pagination from "../components/Pagination";
@@ -40,8 +40,38 @@ export default function Trips() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    let list = [...trips];
+    if (status) list = list.filter((t) => t.status === status);
+    if (q.trim()) {
+      const needle = q.trim().toLowerCase();
+      list = list.filter(
+        (t) =>
+          String(t.id).includes(needle) ||
+          t.source?.toLowerCase().includes(needle) ||
+          t.destination?.toLowerCase().includes(needle) ||
+          t.vehicle_reg?.toLowerCase().includes(needle) ||
+          t.driver_name?.toLowerCase().includes(needle)
+      );
+    }
+    list.sort((a, b) => {
+      if (sort === "oldest") return a.id - b.id;
+      if (sort === "route") {
+        return `${a.source}${a.destination}`.localeCompare(
+          `${b.source}${b.destination}`
+        );
+      }
+      return b.id - a.id;
+    });
+    return list;
+  }, [trips, status, sort, q]);
+
   const { page, pageSize, total, slice, setPage, setPageSize } =
-    usePagination(trips);
+    usePagination(filtered);
 
   async function load() {
     const [t, v, d] = await Promise.all([
@@ -128,6 +158,26 @@ export default function Trips() {
         }
       />
 
+      <div className="filter-row">
+        <input
+          placeholder="Search route, vehicle, driver…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="dispatched">Dispatched</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <select value={sort} onChange={(e) => setSort(e.target.value)}>
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="route">Route A–Z</option>
+        </select>
+      </div>
+
       {error && <p className="form-error">{error}</p>}
 
       {loading ? (
@@ -136,6 +186,11 @@ export default function Trips() {
         <EmptyState
           title="No trips yet"
           body="Create a draft trip, then dispatch when ready."
+        />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title="No matching trips"
+          body="Try another status, search, or sort."
         />
       ) : (
         <div className="trip-list">
