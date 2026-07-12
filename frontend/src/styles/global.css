@@ -17,9 +17,18 @@
   --font: "Manrope", sans-serif;
   --display: "Syne", sans-serif;
   --topbar-bg: rgba(243, 246, 249, 0.72);
+  --topbar-border: rgba(215, 222, 232, 0.45);
   --table-bg: rgba(255, 255, 255, 0.72);
   --input-bg: rgba(255, 255, 255, 0.85);
   --modal-bg: #fff;
+  --btn-primary-bg: #0b1520;
+  --btn-primary-fg: #ffffff;
+  --btn-primary-hover: #162433;
+  --nav-active-bg: #0b1520;
+  --nav-active-fg: #ffffff;
+  --nav-hover-bg: rgba(255, 255, 255, 0.72);
+  --brand-mark-bg: #0b1520;
+  --brand-mark-fg: #ffffff;
   --body-bg:
     radial-gradient(circle at 12% -10%, rgba(31, 122, 107, 0.18), transparent 36%),
     radial-gradient(circle at 90% 0%, rgba(196, 92, 38, 0.12), transparent 28%),
@@ -39,10 +48,19 @@ html[data-theme="dark"] {
   --warn: #e0a45a;
   --danger: #f07167;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
-  --topbar-bg: rgba(12, 18, 26, 0.82);
+  --topbar-bg: rgba(12, 18, 26, 0.9);
+  --topbar-border: rgba(42, 54, 68, 0.9);
   --table-bg: rgba(18, 26, 36, 0.9);
   --input-bg: rgba(15, 22, 32, 0.95);
   --modal-bg: #151e2a;
+  --btn-primary-bg: #3dbaa5;
+  --btn-primary-fg: #061018;
+  --btn-primary-hover: #4ecfb8;
+  --nav-active-bg: #3dbaa5;
+  --nav-active-fg: #061018;
+  --nav-hover-bg: rgba(255, 255, 255, 0.08);
+  --brand-mark-bg: #3dbaa5;
+  --brand-mark-fg: #061018;
   --body-bg:
     radial-gradient(circle at 12% -10%, rgba(61, 186, 165, 0.12), transparent 36%),
     radial-gradient(circle at 90% 0%, rgba(224, 138, 85, 0.08), transparent 28%),
@@ -105,7 +123,7 @@ a {
   padding: 1rem 1.5rem;
   backdrop-filter: blur(16px);
   background: var(--topbar-bg);
-  border-bottom: 1px solid rgba(215, 222, 232, 0.35);
+  border-bottom: 1px solid var(--topbar-border);
 }
 
 .brand {
@@ -120,8 +138,8 @@ a {
   display: grid;
   place-items: center;
   border-radius: 14px;
-  background: var(--ink);
-  color: white;
+  background: var(--brand-mark-bg);
+  color: var(--brand-mark-fg);
   font-family: var(--display);
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -154,12 +172,13 @@ a {
 
 .nav a:hover {
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--nav-hover-bg);
 }
 
 .nav a.active {
-  color: white;
-  background: var(--ink);
+  color: var(--nav-active-fg);
+  background: var(--nav-active-bg);
+  font-weight: 600;
 }
 
 .user-chip {
@@ -236,13 +255,14 @@ a {
 }
 
 .primary-btn {
-  background: var(--ink);
-  color: white;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  font-weight: 600;
 }
 
 .primary-btn:hover {
   transform: translateY(-1px);
-  background: #162433;
+  background: var(--btn-primary-hover);
 }
 
 .primary-btn:disabled,
@@ -259,6 +279,13 @@ a {
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+}
+
+a.primary-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .icon-btn {
@@ -452,6 +479,17 @@ a {
   font-family: var(--display);
   font-size: 1.6rem;
   font-weight: 700;
+}
+
+.recharts-legend-item-text,
+.recharts-default-legend,
+.recharts-legend-wrapper {
+  color: var(--muted) !important;
+  fill: var(--muted) !important;
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: var(--muted);
 }
 
 .pagination {

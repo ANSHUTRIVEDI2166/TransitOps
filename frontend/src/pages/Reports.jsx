@@ -218,7 +218,7 @@ export default function Reports() {
                 xKey="name"
                 bars={[
                   { key: "cost", name: "Ops cost", color: "#1f7a6b" },
-                  { key: "revenue", name: "Revenue", color: "#0b1520" },
+                  { key: "revenue", name: "Revenue", color: "#3d7ea6" },
                 ]}
               />
             </section>
