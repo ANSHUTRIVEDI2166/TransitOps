@@ -16,3 +16,5 @@ venv/
 .vscode/
 *.pdf
 uploads/
+README2.md
+backend/app/seed_bulk.py
